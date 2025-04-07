@@ -15,28 +15,28 @@ func JWTAuth(r repository.AuthRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, dto.ResponseError{Message: "Authorization header is required"})
+			c.JSON(http.StatusUnauthorized, dto.ResponseError{Status: http.StatusUnauthorized, Message: "Authorization header is required"})
 			c.Abort()
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, dto.ResponseError{Message: "Invalid token format"})
+			c.JSON(http.StatusUnauthorized, dto.ResponseError{Status: http.StatusUnauthorized, Message: "Invalid token format"})
 			c.Abort()
 			return
 		}
 
 		cfg, err := config.LoadConfig()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, dto.ResponseError{Message: "Failed to load config"})
+			c.JSON(http.StatusInternalServerError, dto.ResponseError{Status: http.StatusInternalServerError, Message: "Failed to load config"})
 			c.Abort()
 			return
 		}
 
 		userData, err := utils.ValidateToken(parts[1], cfg)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, dto.ResponseError{Message: "Invalid or expired token"})
+			c.JSON(http.StatusUnauthorized, dto.ResponseError{Status: http.StatusUnauthorized, Message: "Invalid or expired token"})
 			c.Abort()
 			return
 		}
@@ -60,14 +60,14 @@ func RoleAuth(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userData, exists := c.Get("userData")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, dto.ResponseError{Message: "User data not found"})
+			c.JSON(http.StatusUnauthorized, dto.ResponseError{Status: http.StatusUnauthorized, Message: "User data not found"})
 			c.Abort()
 			return
 		}
 
 		user, ok := userData.(dto.UserData)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, dto.ResponseError{Message: "Invalid user data"})
+			c.JSON(http.StatusInternalServerError, dto.ResponseError{Status: http.StatusInternalServerError, Message: "Invalid user data"})
 			c.Abort()
 			return
 		}
@@ -82,7 +82,7 @@ func RoleAuth(roles ...string) gin.HandlerFunc {
 		}
 
 		if !allowed {
-			c.JSON(http.StatusForbidden, dto.ResponseError{Message: "Access denied"})
+			c.JSON(http.StatusForbidden, dto.ResponseError{Status: http.StatusForbidden, Message: "Access denied"})
 			c.Abort()
 			return
 		}

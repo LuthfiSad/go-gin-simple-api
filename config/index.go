@@ -39,9 +39,9 @@ func LoadConfig() (*Config, error) {
 		ServerPort:       os.Getenv("SERVER_PORT"),
 		JWTSecret:        os.Getenv("JWT_SECRET"),
 		JWTExpiryHours:   os.Getenv("JWT_EXPIRATION"),
-		CloudinaryName:   os.Getenv("CLOUDINARY_NAME"),
-		CloudinaryKey:    os.Getenv("CLOUDINARY_KEY"),
-		CloudinarySecret: os.Getenv("CLOUDINARY_SECRET"),
+		CloudinaryName:   os.Getenv("CLOUDINARY_CLOUD_NAME"),
+		CloudinaryKey:    os.Getenv("CLOUDINARY_API_KEY"),
+		CloudinarySecret: os.Getenv("CLOUDINARY_API_SECRET"),
 	}
 
 	return config, nil

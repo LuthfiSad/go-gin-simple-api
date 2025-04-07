@@ -20,14 +20,14 @@ type BookService interface {
 }
 
 type bookService struct {
-	repo repository.BookRepository
-	// mediaRepo repository.MediaRepository
+	repo      repository.BookRepository
+	mediaRepo repository.MediaRepository
 }
 
-func NewBookService(repo repository.BookRepository) *bookService {
+func NewBookService(repo repository.BookRepository, mediaRepo repository.MediaRepository) *bookService {
 	return &bookService{
-		repo: repo,
-		// mediaRepo: mediaRepo,
+		repo:      repo,
+		mediaRepo: mediaRepo,
 	}
 }
 
@@ -64,7 +64,7 @@ func (s *bookService) GetBooks(page, perPage int, search string, filter lib.Filt
 func (s *bookService) GetBookByID(id uuid.UUID) (*dto.BookRes, error) {
 	book, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("book not found")
 	}
 
 	response := mapBookToResponse(book)
@@ -78,12 +78,11 @@ func (s *bookService) CreateBook(req dto.BookCreateReq) (*dto.BookRes, error) {
 	}
 
 	if req.CoverID != nil {
-		// cover, err := s.mediaRepo.GetMediaByID(*req.CoverID)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		book.CoverID = req.CoverID
-		// book.CoverID = &cover.ID
+		cover, err := s.mediaRepo.FindByID(*req.CoverID)
+		if err != nil {
+			return nil, errors.New("cover not found")
+		}
+		book.CoverID = &cover.ID
 	}
 
 	if err := s.repo.Create(&book); err != nil {
@@ -97,7 +96,7 @@ func (s *bookService) CreateBook(req dto.BookCreateReq) (*dto.BookRes, error) {
 func (s *bookService) UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.BookRes, error) {
 	book, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("book not found")
 	}
 
 	// Update fields if provided
@@ -110,12 +109,11 @@ func (s *bookService) UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.Book
 	}
 
 	if req.CoverID != nil {
-		// cover, err := s.mediaRepo.GetMediaByID(*req.CoverID)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		book.CoverID = req.CoverID
-		// book.CoverID = &cover.ID
+		cover, err := s.mediaRepo.FindByID(*req.CoverID)
+		if err != nil {
+			return nil, errors.New("cover not found")
+		}
+		book.CoverID = &cover.ID
 	}
 
 	if err := s.repo.Update(book); err != nil {
@@ -129,7 +127,7 @@ func (s *bookService) UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.Book
 func (s *bookService) DeleteBook(id uuid.UUID) error {
 	_, err := s.repo.FindByID(id)
 	if err != nil {
-		return err
+		return errors.New("book not found")
 	}
 	return s.repo.Delete(id)
 }
@@ -137,15 +135,16 @@ func (s *bookService) DeleteBook(id uuid.UUID) error {
 func (s *bookService) DeleteBookCover(id uuid.UUID) error {
 	book, err := s.repo.FindByID(id)
 	if err != nil {
-		return err
+		return errors.New("book not found")
 	}
 
-	if book.CoverID == nil {
+	if book.CoverID == nil || book.Cover == nil {
 		return errors.New("book has no cover")
 	}
 
 	// Reset cover ID
 	book.CoverID = nil
+	book.Cover = nil
 	return s.repo.Update(book)
 }
 

@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"context"
 	"go-gin-simple-api/config"
 	"time"
@@ -26,7 +27,7 @@ func NewCloudinaryService(cfg *config.Config) (*CloudinaryService, error) {
 	return &CloudinaryService{Cld: cld}, nil
 }
 
-func (c *CloudinaryService) UploadImage(file []byte, folder string) (string, error) {
+func (c *CloudinaryService) UploadImage(file []byte, folder string) (string, string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -34,12 +35,14 @@ func (c *CloudinaryService) UploadImage(file []byte, folder string) (string, err
 		Folder: folder,
 	}
 
-	result, err := c.Cld.Upload.Upload(ctx, file, uploadParams)
+	reader := bytes.NewReader(file)
+
+	result, err := c.Cld.Upload.Upload(ctx, reader, uploadParams)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.SecureURL, nil
+	return result.SecureURL, result.PublicID, nil
 }
 
 func (c *CloudinaryService) DeleteImage(publicID string) error {

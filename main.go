@@ -3,6 +3,7 @@ package main
 import (
 	"go-gin-simple-api/config"
 	"go-gin-simple-api/handler"
+	"go-gin-simple-api/lib"
 	"go-gin-simple-api/middleware"
 	"go-gin-simple-api/repository"
 	"go-gin-simple-api/service"
@@ -24,18 +25,26 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	cloudinary, err := lib.NewCloudinaryService(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to cloudinary: %v", err)
+	}
+
 	// Setup repositories
 	authRepo := repository.NewAuthRepository(db)
 	bookRepo := repository.NewBookRepository(db)
+	mediaRepo := repository.NewMediaRepository(db)
 
 	// Setup services
 	// cloudinaryService := lib.NewCloudinaryService(cfg)
 	authService := service.NewAuthService(authRepo)
-	bookService := service.NewBookService(bookRepo)
+	bookService := service.NewBookService(bookRepo, mediaRepo)
+	mediaService := service.NewMediaService(mediaRepo, bookRepo, cloudinary)
 
 	// Setup handlers
 	authHandler := handler.NewAuthHandler(authService)
 	bookHandler := handler.NewBookHandler(bookService)
+	mediaHandler := handler.NewMediaHandler(mediaService)
 
 	// Setup router
 	router := gin.Default()
@@ -49,12 +58,20 @@ func main() {
 	api.Use(middleware.JWTAuth(authRepo))
 
 	// Book routes
-	api.GET("/books", bookHandler.GetBooks)
-	api.GET("/books/:id", bookHandler.GetBookByID)
-	api.POST("/books", middleware.RoleAuth("admin"), bookHandler.CreateBook)
-	api.PUT("/books/:id", middleware.RoleAuth("admin"), bookHandler.UpdateBook)
-	api.DELETE("/books/:id", middleware.RoleAuth("admin"), bookHandler.DeleteBook)
-	api.DELETE("/books/:id/cover", middleware.RoleAuth("admin"), bookHandler.DeleteBookCover)
+	bookRoute := api.Group("/books")
+	bookRoute.GET("/", bookHandler.GetBooks)
+	bookRoute.GET("/:id", bookHandler.GetBookByID)
+	bookRoute.POST("/", middleware.RoleAuth("admin"), bookHandler.CreateBook)
+	bookRoute.PUT("/:id", middleware.RoleAuth("admin"), bookHandler.UpdateBook)
+	bookRoute.DELETE("/:id", middleware.RoleAuth("admin"), bookHandler.DeleteBook)
+	bookRoute.DELETE("/:id/cover", middleware.RoleAuth("admin"), bookHandler.DeleteBookCover)
+
+	// Media routes
+	media := api.Group("/media")
+	media.GET("/", middleware.RoleAuth("admin"), mediaHandler.GetMedias)
+	media.GET("/:id", middleware.RoleAuth("admin"), mediaHandler.GetMedia)
+	media.POST("/", middleware.RoleAuth("admin"), mediaHandler.UploadMedia)
+	media.DELETE("/:id", middleware.RoleAuth("admin"), mediaHandler.DeleteMedia)
 
 	// User routes
 	// api.GET("/users", middleware.RoleAuth("admin"), userHandler.GetUsers)
