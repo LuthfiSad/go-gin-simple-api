@@ -20,3 +20,9 @@ type BookTransaction struct {
 	ReturnAt   *time.Time `json:"return_at"`
 	Charges    []Charge   `gorm:"foreignKey:BookTransactionID" json:"charges,omitempty"`
 }
+
+const (
+	StatusBTBorrowed = "Borrowed"
+	StatusBTReturned = "Returned"
+	StatusBTOverdue  = "Overdue"
+)

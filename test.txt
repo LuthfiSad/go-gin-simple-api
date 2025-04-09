@@ -1,0 +1,712 @@
+package model
+
+import (
+	"github.com/google/uuid"
+)
+
+type BookStock struct {
+	Code             string            `gorm:"primaryKey;size:50" json:"code"`
+	BookID           uuid.UUID         `gorm:"not null" json:"book_id"`
+	Book             Book              `gorm:"foreignKey:BookID" json:"book"`
+	Status           string            `gorm:"size:50;not null" json:"status"` // Available, Borrowed, Damaged, Lost
+	BookTransactions []BookTransaction `gorm:"foreignKey:StockCode;references:Code" json:"book_transactions,omitempty"`
+}
+
+const (
+	StatusAvailable = "Available"
+	StatusBorrowed  = "Borrowed"
+	StatusDamaged   = "Damaged"
+	StatusLost      = "Lost"
+)
+
+package dto
+
+import (
+	"github.com/google/uuid"
+)
+
+type BookStockResponse struct {
+	Code   string    `json:"code"`
+	BookID uuid.UUID `json:"book_id"`
+	Book   *BookRes  `json:"book,omitempty"`
+	Status string    `json:"status"`
+}
+
+type BookStockCreateRequest struct {
+	Code   string    `json:"code" validate:"required,min=3,max=50"`
+	BookID uuid.UUID `json:"book_id" validate:"required"`
+	Status string    `json:"status" validate:"omitempty,oneof=Available Borrowed Damaged Lost"`
+}
+
+type BookStockUpdateRequest struct {
+	BookID uuid.UUID `json:"book_id,omitempty"`
+	Status string    `json:"status,omitempty" validate:"omitempty,oneof=Available Borrowed Damaged Lost"`
+}
+
+type BookStockStatusUpdateRequest struct {
+	Status string `json:"status" validate:"required,oneof=Available Borrowed Damaged Lost"`
+}
+
+package repository
+
+import (
+	"fmt"
+	"go-gin-simple-api/lib"
+	"go-gin-simple-api/model"
+	"strings"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type BookStockRepository interface {
+	FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.BookStock, int64, error)
+	FindByCode(code string) (*model.BookStock, error)
+	FindByBookID(bookID uuid.UUID) ([]model.BookStock, error)
+	FindAvailableByBookID(bookID uuid.UUID) ([]model.BookStock, error)
+	Create(bookStock *model.BookStock) error
+	Update(bookStock *model.BookStock) error
+	Delete(code string) error
+	UpdateStatus(code, status string) error
+}
+
+type bookStockRepository struct {
+	db *gorm.DB
+}
+
+func NewBookStockRepository(db *gorm.DB) BookStockRepository {
+	return &bookStockRepository{db}
+}
+
+func (r *bookStockRepository) FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.BookStock, int64, error) {
+	var bookStocks []model.BookStock
+	var total int64
+
+	query := r.db.Model(&model.BookStock{}).Preload("Book.Cover").Preload("User")
+
+	// Join with Book to enable searching by book title
+	query = query.Joins("LEFT JOIN books ON book_stocks.book_id = books.id")
+
+	// Apply search if provided
+	if search != "" {
+		query = query.Where("book_stocks.code LIKE ? OR book_stocks.status LIKE ? OR books.title LIKE ?",
+			"%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Apply filters
+	if len(filter) > 0 {
+		for _, f := range filter {
+			switch f.Operator {
+			case lib.IsEqual:
+				query = query.Where(fmt.Sprintf("book_stocks.%s = ?", f.Field), f.Value)
+			case lib.IsNotEqual:
+				query = query.Where(fmt.Sprintf("book_stocks.%s != ?", f.Field), f.Value)
+			case lib.IsGreaterThan:
+				query = query.Where(fmt.Sprintf("book_stocks.%s > ?", f.Field), f.Value)
+			case lib.IsGreaterEqual:
+				query = query.Where(fmt.Sprintf("book_stocks.%s >= ?", f.Field), f.Value)
+			case lib.IsLessThan:
+				query = query.Where(fmt.Sprintf("book_stocks.%s < ?", f.Field), f.Value)
+			case lib.IsLessEqual:
+				query = query.Where(fmt.Sprintf("book_stocks.%s <= ?", f.Field), f.Value)
+			case lib.IsContain:
+				query = query.Where(fmt.Sprintf("book_stocks.%s LIKE ?", f.Field), "%"+fmt.Sprintf("%v", f.Value)+"%")
+			case lib.IsBeginWith:
+				query = query.Where(fmt.Sprintf("book_stocks.%s LIKE ?", f.Field), fmt.Sprintf("%v", f.Value)+"%")
+			case lib.IsEndWith:
+				query = query.Where(fmt.Sprintf("book_stocks.%s LIKE ?", f.Field), "%"+fmt.Sprintf("%v", f.Value))
+			case lib.IsIn:
+				if values, ok := f.Value.([]interface{}); ok {
+					query = query.Where(fmt.Sprintf("book_stocks.%s IN ?", f.Field), values)
+				} else if str, ok := f.Value.(string); ok {
+					values := strings.Split(str, ",")
+					query = query.Where(fmt.Sprintf("book_stocks.%s IN ?", f.Field), values)
+				}
+			}
+		}
+	}
+
+	// Count total
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply pagination
+	offset := (page - 1) * perPage
+	if page > 0 && perPage > 0 {
+		query = query.Offset(offset).Limit(perPage)
+	}
+
+	// Preload relationships
+	query = query.Preload("Book")
+
+	// Execute query
+	if err := query.Find(&bookStocks).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return bookStocks, total, nil
+}
+
+func (r *bookStockRepository) FindByCode(code string) (*model.BookStock, error) {
+	var bookStock model.BookStock
+	if err := r.db.Preload("Book").Preload("Book.Cover").Preload("User").First(&bookStock, "code = ?", code).Error; err != nil {
+		return nil, err
+	}
+	return &bookStock, nil
+}
+
+func (r *bookStockRepository) FindByBookID(bookID uuid.UUID) ([]model.BookStock, error) {
+	var bookStocks []model.BookStock
+	if err := r.db.Preload("Book").Preload("Book.Cover").Preload("User").Where("book_id = ?", bookID).Find(&bookStocks).Error; err != nil {
+		return nil, err
+	}
+	return bookStocks, nil
+}
+
+func (r *bookStockRepository) FindAvailableByBookID(bookID uuid.UUID) ([]model.BookStock, error) {
+	var bookStocks []model.BookStock
+	if err := r.db.Preload("Book").Preload("Book.Cover").Preload("User").Where("book_id = ? AND status = ?", bookID, model.StatusAvailable).Find(&bookStocks).Error; err != nil {
+		return nil, err
+	}
+	return bookStocks, nil
+}
+
+func (r *bookStockRepository) Create(bookStock *model.BookStock) error {
+	return r.db.Create(bookStock).Error
+}
+
+func (r *bookStockRepository) Update(bookStock *model.BookStock) error {
+	return r.db.Save(bookStock).Error
+}
+
+func (r *bookStockRepository) Delete(code string) error {
+	return r.db.Delete(&model.BookStock{}, "code = ?", code).Error
+}
+
+func (r *bookStockRepository) UpdateStatus(code, status string) error {
+	updates := map[string]interface{}{
+		"status": status,
+	}
+
+	return r.db.Model(&model.BookStock{}).Where("code = ?", code).Updates(updates).Error
+}
+
+package service
+
+import (
+	"errors"
+	"fmt"
+	"go-gin-simple-api/dto"
+	"go-gin-simple-api/lib"
+	"go-gin-simple-api/model"
+	"go-gin-simple-api/repository"
+
+	"github.com/google/uuid"
+)
+
+type BookStockService interface {
+	GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error)
+	GetByCode(code string) (*dto.BookStockResponse, error)
+	GetByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error)
+	GetAvailableByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error)
+	Create(bookStockRequest dto.BookStockCreateRequest) (*dto.BookStockResponse, error)
+	Update(code string, bookStockRequest dto.BookStockUpdateRequest) (*dto.BookStockResponse, error)
+	Delete(code string) error
+	UpdateStatus(code string, req dto.BookStockStatusUpdateRequest) (*dto.BookStockResponse, error)
+}
+
+type bookStockService struct {
+	repository repository.BookStockRepository
+	bookRepo   repository.BookRepository
+}
+
+func NewBookStockService(repository repository.BookStockRepository, bookRepo repository.BookRepository) BookStockService {
+	return &bookStockService{
+		repository: repository,
+		bookRepo:   bookRepo,
+	}
+}
+
+func (s *bookStockService) GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error) {
+	bookStocks, total, err := s.repository.FindAll(page, perPage, search, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	bookStockResponses := make([]dto.BookStockResponse, 0)
+	for _, bookStock := range bookStocks {
+		bookStockResponses = append(bookStockResponses, mapToBookStockResponse(&bookStock))
+	}
+
+	// Calculate total pages
+	totalPages := int64(total) / int64(perPage)
+	if int64(total)%int64(perPage) > 0 {
+		totalPages++
+	}
+
+	return &dto.PaginatedResponseData[[]dto.BookStockResponse]{
+		Status:  200,
+		Message: "Book stocks retrieved successfully",
+		Data:    bookStockResponses,
+		Meta: dto.PaginationMeta{
+			Page:        page,
+			PerPage:     perPage,
+			TotalItems:  total,
+			TotalPages:  totalPages,
+			ItemsOnPage: int64(len(bookStockResponses)),
+		},
+	}, nil
+}
+
+func (s *bookStockService) GetByCode(code string) (*dto.BookStockResponse, error) {
+	bookStock, err := s.repository.FindByCode(code)
+	if err != nil {
+		return nil, err
+	}
+
+	response := mapToBookStockResponse(bookStock)
+	return &response, nil
+}
+
+func (s *bookStockService) GetByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error) {
+	bookStocks, err := s.repository.FindByBookID(bookID)
+	if err != nil {
+		return nil, err
+	}
+
+	var bookStockResponses []dto.BookStockResponse
+	for _, bookStock := range bookStocks {
+		bookStockResponses = append(bookStockResponses, mapToBookStockResponse(&bookStock))
+	}
+
+	return bookStockResponses, nil
+}
+
+func (s *bookStockService) GetAvailableByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error) {
+	bookStocks, err := s.repository.FindAvailableByBookID(bookID)
+	if err != nil {
+		return nil, err
+	}
+
+	var bookStockResponses []dto.BookStockResponse
+	for _, bookStock := range bookStocks {
+		bookStockResponses = append(bookStockResponses, mapToBookStockResponse(&bookStock))
+	}
+
+	return bookStockResponses, nil
+}
+
+func (s *bookStockService) Create(req dto.BookStockCreateRequest) (*dto.BookStockResponse, error) {
+	// Check if book exists
+	_, err := s.bookRepo.FindByID(req.BookID)
+	if err != nil {
+		return nil, errors.New("book not found")
+	}
+
+	// Check if code already exists
+	existingStock, err := s.repository.FindByCode(req.Code)
+	if err == nil && existingStock != nil {
+		return nil, errors.New("code already exists")
+	}
+
+	bookStock := model.BookStock{
+		Code:   req.Code,
+		BookID: req.BookID,
+		Status: model.StatusAvailable,
+	}
+
+	if req.Status != "" {
+		bookStock.Status = req.Status
+	}
+
+	fmt.Println(bookStock)
+
+	if err := s.repository.Create(&bookStock); err != nil {
+		return nil, err
+	}
+
+	response := mapToBookStockResponse(&bookStock)
+	return &response, nil
+}
+
+func (s *bookStockService) Update(code string, req dto.BookStockUpdateRequest) (*dto.BookStockResponse, error) {
+	// Check if book stock exists
+	bookStock, err := s.repository.FindByCode(code)
+	if err != nil {
+		return nil, errors.New("book stock not found")
+	}
+	fmt.Println("bookStock", bookStock)
+	fmt.Printf("Book: %+v\n", bookStock.Book)
+
+	// Check if book exists when book_id is provided
+	if req.BookID != uuid.Nil {
+		book, err := s.bookRepo.FindByID(req.BookID)
+		if err != nil {
+			return nil, errors.New("book not found")
+		}
+		fmt.Println("book", book)
+		bookStock.BookID = book.ID
+		bookStock.Book = *book
+	}
+
+	// Update fields if provided
+	if req.Status != "" {
+		bookStock.Status = req.Status
+	}
+
+	if err := s.repository.Update(bookStock); err != nil {
+		return nil, err
+	}
+
+	response := mapToBookStockResponse(bookStock)
+	return &response, nil
+}
+
+func (s *bookStockService) Delete(code string) error {
+	// Check if book stock exists
+	_, err := s.repository.FindByCode(code)
+	if err != nil {
+		return errors.New("book stock not found")
+	}
+
+	// Delete book stock
+	return s.repository.Delete(code)
+}
+
+func (s *bookStockService) UpdateStatus(code string, req dto.BookStockStatusUpdateRequest) (*dto.BookStockResponse, error) {
+	// Check if book stock exists
+	bookStock, err := s.repository.FindByCode(code)
+	if err != nil {
+		return nil, errors.New("book stock not found")
+	}
+
+	// Update status
+	if err := s.repository.UpdateStatus(code, req.Status); err != nil {
+		return nil, err
+	}
+
+	response := mapToBookStockResponse(bookStock)
+	return &response, nil
+}
+
+// Helper function to map a BookStock entity to a BookStockResponse DTO
+func mapToBookStockResponse(bookStock *model.BookStock) dto.BookStockResponse {
+	response := dto.BookStockResponse{
+		Code:   bookStock.Code,
+		BookID: bookStock.BookID,
+		Status: bookStock.Status,
+		// BorrowedID: bookStock.BorrowedID,
+	}
+
+	// if bookStock.BorrowedAt != nil {
+	// 	response.BorrowedAt = bookStock.BorrowedAt
+	// }
+
+	if bookStock.Book.ID != uuid.Nil {
+		response.Book = &dto.BookRes{
+			ID:          bookStock.Book.ID,
+			Title:       bookStock.Book.Title,
+			Description: bookStock.Book.Description,
+			CoverURL:    bookStock.Book.Cover.Path,
+		}
+
+		// if bookStock.Book.CoverID != nil {
+		// 	response.Book.Cover.ID = *bookStock.Book.CoverID
+		// 	if bookStock.Book.Cover != nil {
+		// 		response.Book.Cover = bookStock.Book.Cover
+		// 	}
+		// }
+	}
+
+	// if bookStock.BorrowedID != nil {
+	// 	response.User = &dto.UserData{
+	// 		ID:    bookStock.User.ID,
+	// 		Name:  bookStock.User.Name,
+	// 		Email: bookStock.User.Email,
+	// 		Role:  bookStock.User.Role,
+	// 	}
+	// }
+
+	return response
+}
+
+// handler/book_stock_handler.go
+
+package handler
+
+import (
+	"go-gin-simple-api/dto"
+	"go-gin-simple-api/lib"
+	"go-gin-simple-api/service"
+	"go-gin-simple-api/utils"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+type BookStockHandler struct {
+	bookStockService service.BookStockService
+}
+
+func NewBookStockHandler(bookStockService service.BookStockService) *BookStockHandler {
+	return &BookStockHandler{
+		bookStockService: bookStockService,
+	}
+}
+
+// GetAll handles retrieving all book stocks with pagination, search, and filter
+func (h *BookStockHandler) GetAll(c *gin.Context) {
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
+	search := c.Query("search")
+	filterStr := c.Query("filter")
+
+	// Parse filters
+	filters := lib.ParseFilterString(filterStr)
+
+	// Get book stocks
+	result, err := h.bookStockService.GetAll(page, perPage, search, filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to retrieve book stocks",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// GetByCode handles retrieving a book stock by its code
+func (h *BookStockHandler) GetByCode(c *gin.Context) {
+	code := c.Param("code")
+
+	bookStock, err := h.bookStockService.GetByCode(code)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.ResponseError{
+			Status:  http.StatusNotFound,
+			Message: "Book stock not found",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseData{
+		Status:  http.StatusOK,
+		Message: "Book stock retrieved successfully",
+		Data:    bookStock,
+	})
+}
+
+// GetByBookID handles retrieving book stocks by book ID
+func (h *BookStockHandler) GetByBookID(c *gin.Context) {
+	idStr := c.Param("book_id")
+
+	bookID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid book ID format",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	bookStocks, err := h.bookStockService.GetByBookID(bookID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to retrieve book stocks",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseData{
+		Status:  http.StatusOK,
+		Message: "Book stocks retrieved successfully",
+		Data:    bookStocks,
+	})
+}
+
+// GetAvailableByBookID handles retrieving available book stocks by book ID
+func (h *BookStockHandler) GetAvailableByBookID(c *gin.Context) {
+	idStr := c.Param("book_id")
+
+	bookID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid book ID format",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	bookStocks, err := h.bookStockService.GetAvailableByBookID(bookID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to retrieve available book stocks",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseData{
+		Status:  http.StatusOK,
+		Message: "Available book stocks retrieved successfully",
+		Data:    bookStocks,
+	})
+}
+
+// Create handles creating a new book stock
+func (h *BookStockHandler) Create(c *gin.Context) {
+	var req dto.BookStockCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid request body",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	// Validate request
+	if validationErrors := utils.Validate(req); len(validationErrors) > 0 {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Error:   validationErrors,
+		})
+		return
+	}
+
+	_, err := h.bookStockService.Create(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to create book stock",
+			Error:   map[string]string{"error": err.Error()}})
+		return
+	}
+
+	c.JSON(http.StatusCreated, dto.ResponseSuccess{
+		Status:  http.StatusCreated,
+		Message: "Book stock created successfully",
+	})
+}
+
+// Update handles updating a book stock
+// Update handles updating a book stock
+func (h *BookStockHandler) Update(c *gin.Context) {
+	code := c.Param("code")
+
+	var req dto.BookStockUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid request body",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	// Validate request
+	if validationErrors := utils.Validate(req); len(validationErrors) > 0 {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Error:   validationErrors,
+		})
+		return
+	}
+
+	bookStock, err := h.bookStockService.Update(code, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to update book stock",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseData{
+		Status:  http.StatusOK,
+		Message: "Book stock updated successfully",
+		Data:    bookStock,
+	})
+}
+
+// Delete handles deleting a book stock
+func (h *BookStockHandler) Delete(c *gin.Context) {
+	code := c.Param("code")
+
+	err := h.bookStockService.Delete(code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to delete book stock",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseSuccess{
+		Status:  http.StatusOK,
+		Message: "Book stock deleted successfully",
+	})
+}
+
+// UpdateStatus handles updating a book stock's status
+func (h *BookStockHandler) UpdateStatus(c *gin.Context) {
+	code := c.Param("code")
+
+	var req dto.BookStockStatusUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Invalid request body",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	// Validate request
+	if validationErrors := utils.Validate(req); len(validationErrors) > 0 {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Error:   validationErrors,
+		})
+		return
+	}
+
+	// userData, exists := c.Get("userData")
+	// if !exists {
+	// 	c.JSON(http.StatusUnauthorized, dto.ResponseError{Status: http.StatusUnauthorized, Message: "User data not found"})
+	// 	return
+	// }
+
+	// user, ok := userData.(dto.UserData)
+	// if !ok {
+	// 	c.JSON(http.StatusInternalServerError, dto.ResponseError{Status: http.StatusInternalServerError, Message: "Invalid user data"})
+	// 	return
+	// }
+
+	bookStock, err := h.bookStockService.UpdateStatus(code, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseError{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to update book stock status",
+			Error:   map[string]string{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ResponseData{
+		Status:  http.StatusOK,
+		Message: "Book stock status updated successfully",
+		Data:    bookStock,
+	})
+}

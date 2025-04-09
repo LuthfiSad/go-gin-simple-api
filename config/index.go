@@ -63,6 +63,10 @@ func SetupDatabase(cfg *Config) (*gorm.DB, error) {
 		&model.Book{},
 		&model.Media{},
 		&model.User{},
+		&model.BookStock{},
+		&model.BookTransaction{},
+		&model.Customer{},
+		&model.Charge{},
 	)
 	if err != nil {
 		return nil, err
