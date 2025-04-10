@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"go-gin-simple-api/dto"
 	"go-gin-simple-api/lib"
 	"go-gin-simple-api/model"
@@ -126,8 +125,6 @@ func (s *bookStockService) Create(req dto.BookStockCreateRequest) (*dto.BookStoc
 		bookStock.Status = req.Status
 	}
 
-	fmt.Println(bookStock)
-
 	if err := s.repository.Create(&bookStock); err != nil {
 		return nil, err
 	}
@@ -142,8 +139,6 @@ func (s *bookStockService) Update(code string, req dto.BookStockUpdateRequest) (
 	if err != nil {
 		return nil, errors.New("book stock not found")
 	}
-	fmt.Println("bookStock", bookStock)
-	fmt.Printf("Book: %+v\n", bookStock.Book)
 
 	// Check if book exists when book_id is provided
 	if req.BookID != uuid.Nil {
@@ -151,7 +146,6 @@ func (s *bookStockService) Update(code string, req dto.BookStockUpdateRequest) (
 		if err != nil {
 			return nil, errors.New("book not found")
 		}
-		fmt.Println("book", book)
 		bookStock.BookID = book.ID
 		bookStock.Book = *book
 	}

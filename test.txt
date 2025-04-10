@@ -320,8 +320,6 @@ func (s *bookStockService) Create(req dto.BookStockCreateRequest) (*dto.BookStoc
 		bookStock.Status = req.Status
 	}
 
-	fmt.Println(bookStock)
-
 	if err := s.repository.Create(&bookStock); err != nil {
 		return nil, err
 	}

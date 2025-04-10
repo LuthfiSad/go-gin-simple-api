@@ -396,7 +396,7 @@ func mapToBookTransactionResponse(transaction *model.BookTransaction) dto.BookTr
 			Description: transaction.Book.Description,
 		}
 
-		if transaction.Book.Cover.Path != "" {
+		if transaction.Book.Cover != nil && transaction.Book.Cover.Path != "" {
 			response.Book.CoverURL = transaction.Book.Cover.Path
 		}
 	}

@@ -109,8 +109,8 @@ func (s *chargeService) GetByUserID(userID uuid.UUID) ([]dto.ChargeResponse, err
 }
 
 func (s *chargeService) Create(userEmail string, req dto.ChargeCreateRequest) (*dto.ChargeResponse, error) {
-	// Check if book transaction exists
-	transaction, err := s.bookTransactionRepo.FindByID(req.BookTransactionID)
+	// Check if book transactionData exists
+	transactionData, err := s.bookTransactionRepo.FindByID(req.BookTransactionID)
 	if err != nil {
 		return nil, errors.New("book transaction not found")
 	}
@@ -122,12 +122,25 @@ func (s *chargeService) Create(userEmail string, req dto.ChargeCreateRequest) (*
 	}
 
 	// Calculate total charge
-	total := float64(req.DaysLate) * req.DailyLateFee
+	// total := float64(req.DaysLate) * req.DailyLateFee
+
+	var daysLate int
+	duration := time.Since(transactionData.DueDate)
+	if duration <= 0 {
+		return nil, errors.New("transaction is not late")
+	} else {
+		daysLate = int(duration.Hours() / 24)
+		if duration.Hours()/24 > float64(daysLate) {
+			daysLate++
+		}
+	}
+
+	total := float64(daysLate) * req.DailyLateFee
 
 	charge := model.Charge{
 		ID:                uuid.New(),
-		BookTransactionID: transaction.ID,
-		DaysLate:          req.DaysLate,
+		BookTransactionID: transactionData.ID,
+		DaysLate:          daysLate,
 		DailyLateFee:      req.DailyLateFee,
 		Total:             total,
 		UserID:            user.ID,
@@ -156,8 +169,16 @@ func (s *chargeService) Update(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.
 	}
 
 	// Update fields if provided
-	if req.DaysLate != nil {
-		charge.DaysLate = *req.DaysLate
+	var daysLate int
+	// charge.DaysLate = *req.DaysLate
+	duration := time.Since(charge.BookTransaction.DueDate)
+	if duration <= 0 {
+		return nil, errors.New("transaction is not late")
+	} else {
+		daysLate = int(duration.Hours() / 24)
+		if duration.Hours()/24 > float64(daysLate) {
+			daysLate++
+		}
 	}
 
 	if req.DailyLateFee != nil {
@@ -165,7 +186,8 @@ func (s *chargeService) Update(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.
 	}
 
 	// Recalculate total
-	charge.Total = float64(charge.DaysLate) * charge.DailyLateFee
+	// charge.Total = float64(charge.DaysLate) * charge.DailyLateFee
+	charge.Total = float64(daysLate) * charge.DailyLateFee
 
 	if err := s.repository.Update(charge); err != nil {
 		return nil, err

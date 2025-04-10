@@ -102,7 +102,7 @@ func (r *chargeRepository) FindAll(page, perPage int, search string, filter lib.
 
 func (r *chargeRepository) FindByID(id uuid.UUID) (*model.Charge, error) {
 	var charge model.Charge
-	if err := r.db.Preload("BookTransaction.Book").Preload("BookTransaction.Customer").Preload("User").First(&charge, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("BookTransaction").Preload("BookTransaction.Book").Preload("BookTransaction.Book.Cover").Preload("BookTransaction.Customer").Preload("User").First(&charge, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &charge, nil
@@ -110,7 +110,7 @@ func (r *chargeRepository) FindByID(id uuid.UUID) (*model.Charge, error) {
 
 func (r *chargeRepository) FindByBookTransactionID(bookTransactionID uuid.UUID) ([]model.Charge, error) {
 	var charges []model.Charge
-	if err := r.db.Preload("BookTransaction.Book").Preload("BookTransaction.Customer").Preload("User").Where("book_transaction_id = ?", bookTransactionID).Find(&charges).Error; err != nil {
+	if err := r.db.Preload("BookTransaction.Book").Preload("BookTransaction.Book.Cover").Preload("BookTransaction.Customer").Preload("User").Where("book_transaction_id = ?", bookTransactionID).Find(&charges).Error; err != nil {
 		return nil, err
 	}
 	return charges, nil
@@ -118,7 +118,7 @@ func (r *chargeRepository) FindByBookTransactionID(bookTransactionID uuid.UUID) 
 
 func (r *chargeRepository) FindByUserID(userID uuid.UUID) ([]model.Charge, error) {
 	var charges []model.Charge
-	if err := r.db.Preload("BookTransaction.Book").Preload("BookTransaction.Customer").Preload("User").Where("user_id = ?", userID).Find(&charges).Error; err != nil {
+	if err := r.db.Preload("BookTransaction.Book").Preload("BookTransaction.Book.Cover").Preload("BookTransaction.Customer").Preload("User").Where("user_id = ?", userID).Find(&charges).Error; err != nil {
 		return nil, err
 	}
 	return charges, nil

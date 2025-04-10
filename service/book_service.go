@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"go-gin-simple-api/dto"
 	"go-gin-simple-api/lib"
 	"go-gin-simple-api/model"
@@ -99,8 +98,6 @@ func (s *bookService) UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.Book
 	if err != nil {
 		return nil, errors.New("book not found")
 	}
-	fmt.Println("book", book)
-	fmt.Println("book cover", book.Cover)
 
 	// Update fields if provided
 	if req.Title != "" {
@@ -116,7 +113,6 @@ func (s *bookService) UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.Book
 		if err != nil {
 			return nil, errors.New("cover not found")
 		}
-		fmt.Println("cover", cover)
 		book.CoverID = &cover.ID
 	}
 
