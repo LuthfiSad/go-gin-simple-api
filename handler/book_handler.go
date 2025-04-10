@@ -35,8 +35,8 @@ func NewBookHandler(bookService service.BookService) *BookHandler {
 // 	}
 // }
 
-// GetBooks handles retrieving all books with pagination, search, and filtering
-func (h *BookHandler) GetBooks(c *gin.Context) {
+// ListBooks handles retrieving all books with pagination, search, and filtering
+func (h *BookHandler) ListBooks(c *gin.Context) {
 	// Get pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -47,7 +47,7 @@ func (h *BookHandler) GetBooks(c *gin.Context) {
 	filters := lib.ParseFilterString(filterStr)
 
 	// Get books
-	result, err := h.bookService.GetBooks(page, perPage, search, filters)
+	result, err := h.bookService.ListBooks(page, perPage, search, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -61,7 +61,7 @@ func (h *BookHandler) GetBooks(c *gin.Context) {
 }
 
 // GetBook handles retrieving a specific book by ID
-func (h *BookHandler) GetBookByID(c *gin.Context) {
+func (h *BookHandler) GetBook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -72,7 +72,7 @@ func (h *BookHandler) GetBookByID(c *gin.Context) {
 		return
 	}
 
-	book, err := h.bookService.GetBookByID(id)
+	book, err := h.bookService.GetBook(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,

@@ -2,14 +2,9 @@ package main
 
 import (
 	"go-gin-simple-api/config"
-	"go-gin-simple-api/handler"
 	"go-gin-simple-api/lib"
-	"go-gin-simple-api/middleware"
-	"go-gin-simple-api/repository"
-	"go-gin-simple-api/service"
+	"go-gin-simple-api/router"
 	"log"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -30,113 +25,115 @@ func main() {
 		log.Fatalf("Failed to connect to cloudinary: %v", err)
 	}
 
-	// Setup repositories
-	authRepo := repository.NewAuthRepository(db)
-	bookRepo := repository.NewBookRepository(db)
-	mediaRepo := repository.NewMediaRepository(db)
-	bookStockRepo := repository.NewBookStockRepository(db)
-	customerRepo := repository.NewCustomerRepository(db)
-	chargeRepo := repository.NewChargeRepository(db)
-	bookTransactionRepo := repository.NewBookTransactionRepository(db)
+	router := router.SetupRouter(db, cloudinary)
 
-	// Setup services
-	// cloudinaryService := lib.NewCloudinaryService(cfg)
-	authService := service.NewAuthService(authRepo)
-	bookService := service.NewBookService(bookRepo, mediaRepo)
-	mediaService := service.NewMediaService(mediaRepo, bookRepo, cloudinary)
-	bookStockService := service.NewBookStockService(bookStockRepo, bookRepo)
-	customerService := service.NewCustomerService(customerRepo, bookTransactionRepo)
-	chargeService := service.NewChargeService(chargeRepo, bookTransactionRepo, authRepo)
-	bookTransactionService := service.NewBookTransactionService(bookTransactionRepo, bookRepo, bookStockRepo, customerRepo)
+	// // Setup repositories
+	// authRepo := repository.NewAuthRepository(db)
+	// bookRepo := repository.NewBookRepository(db)
+	// mediaRepo := repository.NewMediaRepository(db)
+	// bookStockRepo := repository.NewBookStockRepository(db)
+	// customerRepo := repository.NewCustomerRepository(db)
+	// chargeRepo := repository.NewChargeRepository(db)
+	// bookTransactionRepo := repository.NewBookTransactionRepository(db)
 
-	// Setup handlers
-	authHandler := handler.NewAuthHandler(authService)
-	bookHandler := handler.NewBookHandler(bookService)
-	mediaHandler := handler.NewMediaHandler(mediaService)
-	bookStockHandler := handler.NewBookStockHandler(bookStockService)
-	customerHandler := handler.NewCustomerHandler(customerService)
-	chargeHandler := handler.NewChargeHandler(chargeService)
-	bookTransactionHandler := handler.NewBookTransactionHandler(bookTransactionService)
+	// // Setup services
+	// // cloudinaryService := lib.NewCloudinaryService(cfg)
+	// authService := service.NewAuthService(authRepo)
+	// bookService := service.NewBookService(bookRepo, mediaRepo)
+	// mediaService := service.NewMediaService(mediaRepo, bookRepo, cloudinary)
+	// bookStockService := service.NewBookStockService(bookStockRepo, bookRepo)
+	// customerService := service.NewCustomerService(customerRepo, bookTransactionRepo)
+	// chargeService := service.NewChargeService(chargeRepo, bookTransactionRepo, authRepo)
+	// bookTransactionService := service.NewBookTransactionService(bookTransactionRepo, bookRepo, bookStockRepo, customerRepo)
 
-	// Setup router
-	router := gin.Default()
+	// // Setup handlers
+	// authHandler := handler.NewAuthHandler(authService)
+	// bookHandler := handler.NewBookHandler(bookService)
+	// mediaHandler := handler.NewMediaHandler(mediaService)
+	// bookStockHandler := handler.NewBookStockHandler(bookStockService)
+	// customerHandler := handler.NewCustomerHandler(customerService)
+	// chargeHandler := handler.NewChargeHandler(chargeService)
+	// bookTransactionHandler := handler.NewBookTransactionHandler(bookTransactionService)
 
-	api := router.Group("/api")
-	// Auth routes
-	api.POST("/register", authHandler.Register)
-	api.POST("/login", authHandler.Login)
+	// // Setup router
+	// router := gin.Default()
 
-	// API routes with middleware
-	api.Use(middleware.JWTAuth(authRepo))
+	// api := router.Group("/api")
+	// // Auth routes
+	// api.POST("/register", authHandler.Register)
+	// api.POST("/login", authHandler.Login)
 
-	// Book routes
-	bookRoute := api.Group("/books")
-	bookRoute.GET("/", bookHandler.GetBooks)
-	bookRoute.GET("/:id", bookHandler.GetBookByID)
-	bookRoute.POST("/", middleware.RoleAuth("admin"), bookHandler.CreateBook)
-	bookRoute.PUT("/:id", middleware.RoleAuth("admin"), bookHandler.UpdateBook)
-	bookRoute.DELETE("/:id", middleware.RoleAuth("admin"), bookHandler.DeleteBook)
-	bookRoute.DELETE("/:id/cover", middleware.RoleAuth("admin"), bookHandler.DeleteBookCover)
+	// // API routes with middleware
+	// api.Use(middleware.JWTAuth(authRepo))
 
-	// Media routes
-	media := api.Group("/media")
-	media.GET("/", middleware.RoleAuth("admin"), mediaHandler.GetMedias)
-	media.GET("/:id", middleware.RoleAuth("admin"), mediaHandler.GetMedia)
-	media.POST("/", middleware.RoleAuth("admin"), mediaHandler.UploadMedia)
-	media.DELETE("/:id", middleware.RoleAuth("admin"), mediaHandler.DeleteMedia)
+	// // Book routes
+	// bookRoute := api.Group("/books")
+	// bookRoute.GET("/", bookHandler.GetBooks)
+	// bookRoute.GET("/:id", bookHandler.GetBookByID)
+	// bookRoute.POST("/", middleware.RoleAuth("admin"), bookHandler.CreateBook)
+	// bookRoute.PUT("/:id", middleware.RoleAuth("admin"), bookHandler.UpdateBook)
+	// bookRoute.DELETE("/:id", middleware.RoleAuth("admin"), bookHandler.DeleteBook)
+	// bookRoute.DELETE("/:id/cover", middleware.RoleAuth("admin"), bookHandler.DeleteBookCover)
 
-	// BookStock routes
-	bookStock := api.Group("/bookstocks")
-	bookStock.GET("", bookStockHandler.GetAll)
-	bookStock.GET("/:code", bookStockHandler.GetByCode)
-	bookStock.GET("/book/:book_id", bookStockHandler.GetByBookID)
-	bookStock.GET("/book/:book_id/available", bookStockHandler.GetAvailableByBookID)
+	// // Media routes
+	// media := api.Group("/media")
+	// media.GET("/", middleware.RoleAuth("admin"), mediaHandler.GetMedias)
+	// media.GET("/:id", middleware.RoleAuth("admin"), mediaHandler.GetMedia)
+	// media.POST("/", middleware.RoleAuth("admin"), mediaHandler.UploadMedia)
+	// media.DELETE("/:id", middleware.RoleAuth("admin"), mediaHandler.DeleteMedia)
 
-	// Protected routes (admin only)
-	bookStock.POST("", middleware.RoleAuth("admin"), bookStockHandler.Create)
-	bookStock.PUT("/:code", middleware.RoleAuth("admin"), bookStockHandler.Update)
-	bookStock.DELETE("/:code", middleware.RoleAuth("admin"), bookStockHandler.Delete)
-	bookStock.PATCH("/:code/status", middleware.RoleAuth("admin"), bookStockHandler.UpdateStatus)
+	// // BookStock routes
+	// bookStock := api.Group("/bookstocks")
+	// bookStock.GET("", bookStockHandler.GetAll)
+	// bookStock.GET("/:code", bookStockHandler.GetByCode)
+	// bookStock.GET("/book/:book_id", bookStockHandler.GetByBookID)
+	// bookStock.GET("/book/:book_id/available", bookStockHandler.GetAvailableByBookID)
 
-	// Customer routes
-	customerRoute := api.Group("/customers")
-	customerRoute.GET("", customerHandler.GetAll)
-	customerRoute.GET("/:id", customerHandler.GetByID)
-	customerRoute.GET("/:id/transactions", customerHandler.GetByIDWithTransactions)
-	customerRoute.GET("/code/:code", customerHandler.GetByCode)
+	// // Protected routes (admin only)
+	// bookStock.POST("", middleware.RoleAuth("admin"), bookStockHandler.Create)
+	// bookStock.PUT("/:code", middleware.RoleAuth("admin"), bookStockHandler.Update)
+	// bookStock.DELETE("/:code", middleware.RoleAuth("admin"), bookStockHandler.Delete)
+	// bookStock.PATCH("/:code/status", middleware.RoleAuth("admin"), bookStockHandler.UpdateStatus)
 
-	// Protected customer routes (admin only)
-	customerRoute.POST("", middleware.RoleAuth("admin"), customerHandler.Create)
-	customerRoute.PUT("/:id", middleware.RoleAuth("admin"), customerHandler.Update)
-	customerRoute.DELETE("/:id", middleware.RoleAuth("admin"), customerHandler.Delete)
+	// // Customer routes
+	// customerRoute := api.Group("/customers")
+	// customerRoute.GET("", customerHandler.GetAll)
+	// customerRoute.GET("/:id", customerHandler.GetByID)
+	// customerRoute.GET("/:id/transactions", customerHandler.GetByIDWithTransactions)
+	// customerRoute.GET("/code/:code", customerHandler.GetByCode)
 
-	// Charge routes
-	chargeRoute := api.Group("/charges")
-	chargeRoute.GET("", chargeHandler.GetAll)
-	chargeRoute.GET("/:id", chargeHandler.GetByID)
-	chargeRoute.GET("/transaction/:transaction_id", chargeHandler.GetByBookTransactionID)
-	chargeRoute.GET("/user/:user_id", chargeHandler.GetByUserID)
+	// // Protected customer routes (admin only)
+	// customerRoute.POST("", middleware.RoleAuth("admin"), customerHandler.Create)
+	// customerRoute.PUT("/:id", middleware.RoleAuth("admin"), customerHandler.Update)
+	// customerRoute.DELETE("/:id", middleware.RoleAuth("admin"), customerHandler.Delete)
 
-	// Protected charge routes
-	chargeRoute.POST("", chargeHandler.Create) // This already checks userData
-	chargeRoute.PUT("/:id", middleware.RoleAuth("admin"), chargeHandler.Update)
-	chargeRoute.DELETE("/:id", middleware.RoleAuth("admin"), chargeHandler.Delete)
+	// // Charge routes
+	// chargeRoute := api.Group("/charges")
+	// chargeRoute.GET("", chargeHandler.GetAll)
+	// chargeRoute.GET("/:id", chargeHandler.GetByID)
+	// chargeRoute.GET("/transaction/:transaction_id", chargeHandler.GetByBookTransactionID)
+	// chargeRoute.GET("/user/:user_id", chargeHandler.GetByUserID)
 
-	// Book transaction routes
-	transactionRoute := api.Group("/transactions")
-	transactionRoute.GET("", bookTransactionHandler.GetAll)
-	transactionRoute.GET("/:id", bookTransactionHandler.GetByID)
-	transactionRoute.GET("/customer/:customer_id", bookTransactionHandler.GetByCustomerID)
-	transactionRoute.GET("/book/:book_id", bookTransactionHandler.GetByBookID)
-	transactionRoute.GET("/stock/:stock_code", bookTransactionHandler.GetByStockCode)
-	transactionRoute.GET("/overdue", bookTransactionHandler.GetOverdueTransactions)
+	// // Protected charge routes
+	// chargeRoute.POST("", chargeHandler.Create) // This already checks userData
+	// chargeRoute.PUT("/:id", middleware.RoleAuth("admin"), chargeHandler.Update)
+	// chargeRoute.DELETE("/:id", middleware.RoleAuth("admin"), chargeHandler.Delete)
 
-	// Protected book transaction routes (admin only)
-	transactionRoute.POST("", middleware.RoleAuth("admin"), bookTransactionHandler.Create)
-	transactionRoute.PUT("/:id", middleware.RoleAuth("admin"), bookTransactionHandler.Update)
-	transactionRoute.DELETE("/:id", middleware.RoleAuth("admin"), bookTransactionHandler.Delete)
-	transactionRoute.PATCH("/:id/status", middleware.RoleAuth("admin"), bookTransactionHandler.UpdateStatus)
-	transactionRoute.POST("/:id/return", middleware.RoleAuth("admin"), bookTransactionHandler.ReturnBook)
+	// // Book transaction routes
+	// transactionRoute := api.Group("/transactions")
+	// transactionRoute.GET("", bookTransactionHandler.GetAll)
+	// transactionRoute.GET("/:id", bookTransactionHandler.GetByID)
+	// transactionRoute.GET("/customer/:customer_id", bookTransactionHandler.GetByCustomerID)
+	// transactionRoute.GET("/book/:book_id", bookTransactionHandler.GetByBookID)
+	// transactionRoute.GET("/stock/:stock_code", bookTransactionHandler.GetByStockCode)
+	// transactionRoute.GET("/overdue", bookTransactionHandler.GetOverdueTransactions)
+
+	// // Protected book transaction routes (admin only)
+	// transactionRoute.POST("", middleware.RoleAuth("admin"), bookTransactionHandler.Create)
+	// transactionRoute.PUT("/:id", middleware.RoleAuth("admin"), bookTransactionHandler.Update)
+	// transactionRoute.DELETE("/:id", middleware.RoleAuth("admin"), bookTransactionHandler.Delete)
+	// transactionRoute.PATCH("/:id/status", middleware.RoleAuth("admin"), bookTransactionHandler.UpdateStatus)
+	// transactionRoute.POST("/:id/return", middleware.RoleAuth("admin"), bookTransactionHandler.ReturnBook)
 
 	// User routes
 	// api.GET("/users", middleware.RoleAuth("admin"), userHandler.GetUsers)

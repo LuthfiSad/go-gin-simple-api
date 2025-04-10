@@ -12,13 +12,13 @@ import (
 )
 
 type CustomerService interface {
-	GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.CustomerResponse], error)
-	GetByID(id uuid.UUID) (*dto.CustomerResponse, error)
+	ListCustomers(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.CustomerResponse], error)
+	GetCustomer(id uuid.UUID) (*dto.CustomerResponse, error)
 	GetByIDWithTransactions(id uuid.UUID) (*dto.CustomerWithTransactionsResponse, error)
 	GetByCode(code string) (*dto.CustomerResponse, error)
-	Create(req dto.CustomerCreateRequest) (*dto.CustomerResponse, error)
-	Update(id uuid.UUID, req dto.CustomerUpdateRequest) (*dto.CustomerResponse, error)
-	Delete(id uuid.UUID) error
+	CreateCustomer(req dto.CustomerCreateRequest) (*dto.CustomerResponse, error)
+	UpdateCustomer(id uuid.UUID, req dto.CustomerUpdateRequest) (*dto.CustomerResponse, error)
+	DeleteCustomer(id uuid.UUID) error
 }
 
 type customerService struct {
@@ -36,7 +36,7 @@ func NewCustomerService(
 	}
 }
 
-func (s *customerService) GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.CustomerResponse], error) {
+func (s *customerService) ListCustomers(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.CustomerResponse], error) {
 	customers, total, err := s.repository.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (s *customerService) GetAll(page, perPage int, search string, filter lib.Fi
 	}, nil
 }
 
-func (s *customerService) GetByID(id uuid.UUID) (*dto.CustomerResponse, error) {
+func (s *customerService) GetCustomer(id uuid.UUID) (*dto.CustomerResponse, error) {
 	customer, err := s.repository.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (s *customerService) GetByCode(code string) (*dto.CustomerResponse, error) 
 	return &response, nil
 }
 
-func (s *customerService) Create(req dto.CustomerCreateRequest) (*dto.CustomerResponse, error) {
+func (s *customerService) CreateCustomer(req dto.CustomerCreateRequest) (*dto.CustomerResponse, error) {
 	// Check if code already exists
 	existingCustomer, err := s.repository.FindByCode(req.Code)
 	if err == nil && existingCustomer != nil {
@@ -126,7 +126,7 @@ func (s *customerService) Create(req dto.CustomerCreateRequest) (*dto.CustomerRe
 	return &response, nil
 }
 
-func (s *customerService) Update(id uuid.UUID, req dto.CustomerUpdateRequest) (*dto.CustomerResponse, error) {
+func (s *customerService) UpdateCustomer(id uuid.UUID, req dto.CustomerUpdateRequest) (*dto.CustomerResponse, error) {
 	// Check if customer exists
 	customer, err := s.repository.FindByID(id)
 	if err != nil {
@@ -155,7 +155,7 @@ func (s *customerService) Update(id uuid.UUID, req dto.CustomerUpdateRequest) (*
 	return &response, nil
 }
 
-func (s *customerService) Delete(id uuid.UUID) error {
+func (s *customerService) DeleteCustomer(id uuid.UUID) error {
 	// Check if customer exists
 	customer, err := s.repository.FindByID(id)
 	if err != nil {

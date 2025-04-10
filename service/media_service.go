@@ -15,9 +15,9 @@ import (
 )
 
 type MediaService interface {
-	GetMedias(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.MediaRes], error)
+	ListMedia(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.MediaRes], error)
 	UploadMedia(ctx context.Context, file *multipart.FileHeader) (*dto.MediaRes, error)
-	GetMediaByID(id uuid.UUID) (*dto.MediaRes, error)
+	GetMedia(id uuid.UUID) (*dto.MediaRes, error)
 	DeleteMedia(ctx context.Context, id uuid.UUID) error
 }
 
@@ -35,8 +35,8 @@ func NewMediaService(repo repository.MediaRepository, repoBook repository.BookRe
 	}
 }
 
-func (s *mediaService) GetMedias(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.MediaRes], error) {
-	media, total, err := s.repo.FindCovers(page, perPage, search, filter)
+func (s *mediaService) ListMedia(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.MediaRes], error) {
+	media, total, err := s.repo.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -104,8 +104,8 @@ func (s *mediaService) UploadMedia(ctx context.Context, file *multipart.FileHead
 	return &response, nil
 }
 
-// GetMediaByID retrieves a media by ID
-func (s *mediaService) GetMediaByID(id uuid.UUID) (*dto.MediaRes, error) {
+// GetMedia retrieves a media by ID
+func (s *mediaService) GetMedia(id uuid.UUID) (*dto.MediaRes, error) {
 	media, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err

@@ -12,14 +12,14 @@ import (
 )
 
 type BookTransactionService interface {
-	GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookTransactionResponse], error)
-	GetByID(id uuid.UUID) (*dto.BookTransactionResponse, error)
+	ListBookTransactions(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookTransactionResponse], error)
+	GetBookTransaction(id uuid.UUID) (*dto.BookTransactionResponse, error)
 	GetByCustomerID(customerID uuid.UUID) ([]dto.BookTransactionResponse, error)
 	GetByBookID(bookID uuid.UUID) ([]dto.BookTransactionResponse, error)
 	GetByStockCode(stockCode string) ([]dto.BookTransactionResponse, error)
-	Create(req dto.BookTransactionCreateRequest) (*dto.BookTransactionResponse, error)
-	Update(id uuid.UUID, req dto.BookTransactionUpdateRequest) (*dto.BookTransactionResponse, error)
-	Delete(id uuid.UUID) error
+	CreateBookTransaction(req dto.BookTransactionCreateRequest) (*dto.BookTransactionResponse, error)
+	UpdateBookTransaction(id uuid.UUID, req dto.BookTransactionUpdateRequest) (*dto.BookTransactionResponse, error)
+	DeleteBookTransaction(id uuid.UUID) error
 	UpdateStatus(id uuid.UUID, req dto.BookTransactionStatusUpdateRequest) (*dto.BookTransactionResponse, error)
 	ReturnBook(id uuid.UUID, req dto.BookTransactionReturnRequest) (*dto.BookTransactionResponse, error)
 	GetOverdueTransactions() ([]dto.BookTransactionResponse, error)
@@ -46,7 +46,7 @@ func NewBookTransactionService(
 	}
 }
 
-func (s *bookTransactionService) GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookTransactionResponse], error) {
+func (s *bookTransactionService) ListBookTransactions(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookTransactionResponse], error) {
 	transactions, total, err := s.repository.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (s *bookTransactionService) GetAll(page, perPage int, search string, filter
 	}, nil
 }
 
-func (s *bookTransactionService) GetByID(id uuid.UUID) (*dto.BookTransactionResponse, error) {
+func (s *bookTransactionService) GetBookTransaction(id uuid.UUID) (*dto.BookTransactionResponse, error) {
 	transaction, err := s.repository.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (s *bookTransactionService) GetByStockCode(stockCode string) ([]dto.BookTra
 	return responses, nil
 }
 
-func (s *bookTransactionService) Create(req dto.BookTransactionCreateRequest) (*dto.BookTransactionResponse, error) {
+func (s *bookTransactionService) CreateBookTransaction(req dto.BookTransactionCreateRequest) (*dto.BookTransactionResponse, error) {
 	// Check if book exists
 	// book, err := s.bookRepo.FindByID(req.BookID)
 	// if err != nil {
@@ -177,7 +177,7 @@ func (s *bookTransactionService) Create(req dto.BookTransactionCreateRequest) (*
 	return &response, nil
 }
 
-func (s *bookTransactionService) Update(id uuid.UUID, req dto.BookTransactionUpdateRequest) (*dto.BookTransactionResponse, error) {
+func (s *bookTransactionService) UpdateBookTransaction(id uuid.UUID, req dto.BookTransactionUpdateRequest) (*dto.BookTransactionResponse, error) {
 	// Check if transaction exists
 	transaction, err := s.repository.FindByID(id)
 	if err != nil {
@@ -262,7 +262,7 @@ func (s *bookTransactionService) Update(id uuid.UUID, req dto.BookTransactionUpd
 	return &response, nil
 }
 
-func (s *bookTransactionService) Delete(id uuid.UUID) error {
+func (s *bookTransactionService) DeleteBookTransaction(id uuid.UUID) error {
 	// Check if transaction exists
 	transaction, err := s.repository.FindByID(id)
 	if err != nil {

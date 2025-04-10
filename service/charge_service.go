@@ -12,13 +12,13 @@ import (
 )
 
 type ChargeService interface {
-	GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.ChargeResponse], error)
-	GetByID(id uuid.UUID) (*dto.ChargeResponse, error)
+	ListCharges(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.ChargeResponse], error)
+	GetCharge(id uuid.UUID) (*dto.ChargeResponse, error)
 	GetByBookTransactionID(bookTransactionID uuid.UUID) ([]dto.ChargeResponse, error)
 	GetByUserID(userID uuid.UUID) ([]dto.ChargeResponse, error)
-	Create(userEmail string, req dto.ChargeCreateRequest) (*dto.ChargeResponse, error)
-	Update(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.ChargeResponse, error)
-	Delete(id uuid.UUID) error
+	CreateCharge(userEmail string, req dto.ChargeCreateRequest) (*dto.ChargeResponse, error)
+	UpdateCharge(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.ChargeResponse, error)
+	DeleteCharge(id uuid.UUID) error
 }
 
 type chargeService struct {
@@ -39,7 +39,7 @@ func NewChargeService(
 	}
 }
 
-func (s *chargeService) GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.ChargeResponse], error) {
+func (s *chargeService) ListCharges(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.ChargeResponse], error) {
 	charges, total, err := s.repository.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (s *chargeService) GetAll(page, perPage int, search string, filter lib.Filt
 	}, nil
 }
 
-func (s *chargeService) GetByID(id uuid.UUID) (*dto.ChargeResponse, error) {
+func (s *chargeService) GetCharge(id uuid.UUID) (*dto.ChargeResponse, error) {
 	charge, err := s.repository.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (s *chargeService) GetByUserID(userID uuid.UUID) ([]dto.ChargeResponse, err
 	return responses, nil
 }
 
-func (s *chargeService) Create(userEmail string, req dto.ChargeCreateRequest) (*dto.ChargeResponse, error) {
+func (s *chargeService) CreateCharge(userEmail string, req dto.ChargeCreateRequest) (*dto.ChargeResponse, error) {
 	// Check if book transactionData exists
 	transactionData, err := s.bookTransactionRepo.FindByID(req.BookTransactionID)
 	if err != nil {
@@ -161,7 +161,7 @@ func (s *chargeService) Create(userEmail string, req dto.ChargeCreateRequest) (*
 	return &response, nil
 }
 
-func (s *chargeService) Update(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.ChargeResponse, error) {
+func (s *chargeService) UpdateCharge(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.ChargeResponse, error) {
 	// Check if charge exists
 	charge, err := s.repository.FindByID(id)
 	if err != nil {
@@ -197,7 +197,7 @@ func (s *chargeService) Update(id uuid.UUID, req dto.ChargeUpdateRequest) (*dto.
 	return &response, nil
 }
 
-func (s *chargeService) Delete(id uuid.UUID) error {
+func (s *chargeService) DeleteCharge(id uuid.UUID) error {
 	// Check if charge exists
 	_, err := s.repository.FindByID(id)
 	if err != nil {

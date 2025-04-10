@@ -22,8 +22,8 @@ func NewBookTransactionHandler(bookTransactionService service.BookTransactionSer
 	}
 }
 
-// GetAll handles retrieving all book transactions with pagination, search, and filter
-func (h *BookTransactionHandler) GetAll(c *gin.Context) {
+// ListBookTransactions handles retrieving all book transactions with pagination, search, and filter
+func (h *BookTransactionHandler) ListBookTransactions(c *gin.Context) {
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -34,7 +34,7 @@ func (h *BookTransactionHandler) GetAll(c *gin.Context) {
 	filters := lib.ParseFilterString(filterStr)
 
 	// Get book transactions
-	result, err := h.bookTransactionService.GetAll(page, perPage, search, filters)
+	result, err := h.bookTransactionService.ListBookTransactions(page, perPage, search, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -47,8 +47,8 @@ func (h *BookTransactionHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// GetByID handles retrieving a book transaction by ID
-func (h *BookTransactionHandler) GetByID(c *gin.Context) {
+// GetBookTransaction handles retrieving a book transaction by ID
+func (h *BookTransactionHandler) GetBookTransaction(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -61,7 +61,7 @@ func (h *BookTransactionHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.bookTransactionService.GetByID(id)
+	transaction, err := h.bookTransactionService.GetBookTransaction(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,
@@ -161,8 +161,8 @@ func (h *BookTransactionHandler) GetByStockCode(c *gin.Context) {
 	})
 }
 
-// Create handles creating a new book transaction
-func (h *BookTransactionHandler) Create(c *gin.Context) {
+// CreateBookTransaction handles creating a new book transaction
+func (h *BookTransactionHandler) CreateBookTransaction(c *gin.Context) {
 	var req dto.BookTransactionCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ResponseError{
@@ -183,7 +183,7 @@ func (h *BookTransactionHandler) Create(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.bookTransactionService.Create(req)
+	transaction, err := h.bookTransactionService.CreateBookTransaction(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -200,8 +200,8 @@ func (h *BookTransactionHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update handles updating a book transaction
-func (h *BookTransactionHandler) Update(c *gin.Context) {
+// UpdateBookTransaction handles updating a book transaction
+func (h *BookTransactionHandler) UpdateBookTransaction(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -234,7 +234,7 @@ func (h *BookTransactionHandler) Update(c *gin.Context) {
 		return
 	}
 
-	transaction, err := h.bookTransactionService.Update(id, req)
+	transaction, err := h.bookTransactionService.UpdateBookTransaction(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -251,8 +251,8 @@ func (h *BookTransactionHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete handles deleting a book transaction
-func (h *BookTransactionHandler) Delete(c *gin.Context) {
+// DeleteBookTransaction handles deleting a book transaction
+func (h *BookTransactionHandler) DeleteBookTransaction(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -265,7 +265,7 @@ func (h *BookTransactionHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err = h.bookTransactionService.Delete(id)
+	err = h.bookTransactionService.DeleteBookTransaction(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,

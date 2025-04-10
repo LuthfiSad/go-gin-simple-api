@@ -11,13 +11,13 @@ import (
 )
 
 type BookStockService interface {
-	GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error)
-	GetByCode(code string) (*dto.BookStockResponse, error)
+	ListBookStocks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error)
+	GetBookStock(code string) (*dto.BookStockResponse, error)
 	GetByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error)
 	GetAvailableByBookID(bookID uuid.UUID) ([]dto.BookStockResponse, error)
-	Create(bookStockRequest dto.BookStockCreateRequest) (*dto.BookStockResponse, error)
-	Update(code string, bookStockRequest dto.BookStockUpdateRequest) (*dto.BookStockResponse, error)
-	Delete(code string) error
+	CreateBookStock(bookStockRequest dto.BookStockCreateRequest) (*dto.BookStockResponse, error)
+	UpdateBookStock(code string, bookStockRequest dto.BookStockUpdateRequest) (*dto.BookStockResponse, error)
+	DeleteBookStock(code string) error
 	UpdateStatus(code string, req dto.BookStockStatusUpdateRequest) (*dto.BookStockResponse, error)
 }
 
@@ -33,7 +33,7 @@ func NewBookStockService(repository repository.BookStockRepository, bookRepo rep
 	}
 }
 
-func (s *bookStockService) GetAll(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error) {
+func (s *bookStockService) ListBookStocks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookStockResponse], error) {
 	bookStocks, total, err := s.repository.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (s *bookStockService) GetAll(page, perPage int, search string, filter lib.F
 	}, nil
 }
 
-func (s *bookStockService) GetByCode(code string) (*dto.BookStockResponse, error) {
+func (s *bookStockService) GetBookStock(code string) (*dto.BookStockResponse, error) {
 	bookStock, err := s.repository.FindByCode(code)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (s *bookStockService) GetAvailableByBookID(bookID uuid.UUID) ([]dto.BookSto
 	return bookStockResponses, nil
 }
 
-func (s *bookStockService) Create(req dto.BookStockCreateRequest) (*dto.BookStockResponse, error) {
+func (s *bookStockService) CreateBookStock(req dto.BookStockCreateRequest) (*dto.BookStockResponse, error) {
 	// Check if book exists
 	_, err := s.bookRepo.FindByID(req.BookID)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *bookStockService) Create(req dto.BookStockCreateRequest) (*dto.BookStoc
 	return &response, nil
 }
 
-func (s *bookStockService) Update(code string, req dto.BookStockUpdateRequest) (*dto.BookStockResponse, error) {
+func (s *bookStockService) UpdateBookStock(code string, req dto.BookStockUpdateRequest) (*dto.BookStockResponse, error) {
 	// Check if book stock exists
 	bookStock, err := s.repository.FindByCode(code)
 	if err != nil {
@@ -163,7 +163,7 @@ func (s *bookStockService) Update(code string, req dto.BookStockUpdateRequest) (
 	return &response, nil
 }
 
-func (s *bookStockService) Delete(code string) error {
+func (s *bookStockService) DeleteBookStock(code string) error {
 	// Check if book stock exists
 	_, err := s.repository.FindByCode(code)
 	if err != nil {

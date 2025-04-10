@@ -22,8 +22,8 @@ func NewChargeHandler(chargeService service.ChargeService) *ChargeHandler {
 	}
 }
 
-// GetAll handles retrieving all charges with pagination, search, and filter
-func (h *ChargeHandler) GetAll(c *gin.Context) {
+// ListCharges handles retrieving all charges with pagination, search, and filter
+func (h *ChargeHandler) ListCharges(c *gin.Context) {
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -34,7 +34,7 @@ func (h *ChargeHandler) GetAll(c *gin.Context) {
 	filters := lib.ParseFilterString(filterStr)
 
 	// Get charges
-	result, err := h.chargeService.GetAll(page, perPage, search, filters)
+	result, err := h.chargeService.ListCharges(page, perPage, search, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -47,8 +47,8 @@ func (h *ChargeHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// GetByID handles retrieving a charge by ID
-func (h *ChargeHandler) GetByID(c *gin.Context) {
+// GetCharge handles retrieving a charge by ID
+func (h *ChargeHandler) GetCharge(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -61,7 +61,7 @@ func (h *ChargeHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	charge, err := h.chargeService.GetByID(id)
+	charge, err := h.chargeService.GetCharge(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,
@@ -140,8 +140,8 @@ func (h *ChargeHandler) GetByUserID(c *gin.Context) {
 	})
 }
 
-// Create handles creating a new charge
-func (h *ChargeHandler) Create(c *gin.Context) {
+// CreateCharge handles creating a new charge
+func (h *ChargeHandler) CreateCharge(c *gin.Context) {
 	var req dto.ChargeCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ResponseError{
@@ -174,7 +174,7 @@ func (h *ChargeHandler) Create(c *gin.Context) {
 		return
 	}
 
-	charge, err := h.chargeService.Create(user.Email, req)
+	charge, err := h.chargeService.CreateCharge(user.Email, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -191,8 +191,8 @@ func (h *ChargeHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update handles updating a charge
-func (h *ChargeHandler) Update(c *gin.Context) {
+// UpdateCharge handles updating a charge
+func (h *ChargeHandler) UpdateCharge(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -225,7 +225,7 @@ func (h *ChargeHandler) Update(c *gin.Context) {
 		return
 	}
 
-	charge, err := h.chargeService.Update(id, req)
+	charge, err := h.chargeService.UpdateCharge(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -242,8 +242,8 @@ func (h *ChargeHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete handles deleting a charge
-func (h *ChargeHandler) Delete(c *gin.Context) {
+// DeleteCharge handles deleting a charge
+func (h *ChargeHandler) DeleteCharge(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -256,7 +256,7 @@ func (h *ChargeHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err = h.chargeService.Delete(id)
+	err = h.chargeService.DeleteCharge(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,

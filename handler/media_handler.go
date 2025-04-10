@@ -32,8 +32,8 @@ func NewMediaHandler(mediaService service.MediaService) *MediaHandler {
 // 	}
 // }
 
-// GetMedias handles retrieving a list of media
-func (h *MediaHandler) GetMedias(c *gin.Context) {
+// ListMedia handles retrieving a list of media
+func (h *MediaHandler) ListMedia(c *gin.Context) {
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -43,7 +43,7 @@ func (h *MediaHandler) GetMedias(c *gin.Context) {
 	// Parse filters
 	filter := lib.ParseFilterString(filterStr)
 
-	result, err := h.mediaService.GetMedias(page, perPage, search, filter)
+	result, err := h.mediaService.ListMedia(page, perPage, search, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -96,7 +96,7 @@ func (h *MediaHandler) GetMedia(c *gin.Context) {
 		return
 	}
 
-	media, err := h.mediaService.GetMediaByID(id)
+	media, err := h.mediaService.GetMedia(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,

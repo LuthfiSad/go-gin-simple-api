@@ -9,7 +9,7 @@ import (
 )
 
 type MediaRepository interface {
-	FindCovers(page, perPage int, search string, filter lib.FilterParams) ([]model.Media, int64, error)
+	FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.Media, int64, error)
 	FindByID(id uuid.UUID) (*model.Media, error)
 	Create(media *model.Media) error
 	Update(media *model.Media) error
@@ -27,7 +27,7 @@ func NewMediaRepository(db *gorm.DB) MediaRepository {
 	}
 }
 
-func (r *mediaRepository) FindCovers(page, perPage int, search string, filter lib.FilterParams) ([]model.Media, int64, error) {
+func (r *mediaRepository) FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.Media, int64, error) {
 	var media []model.Media
 	var total int64
 

@@ -9,7 +9,7 @@ import (
 )
 
 type BookRepository interface {
-	FindBooks(page, perPage int, search string, filter lib.FilterParams) ([]model.Book, int64, error)
+	FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.Book, int64, error)
 	FindByID(id uuid.UUID) (*model.Book, error)
 	Create(book *model.Book) error
 	Update(book *model.Book) error
@@ -26,7 +26,7 @@ func NewBookRepository(db *gorm.DB) *bookRepository {
 	}
 }
 
-func (r *bookRepository) FindBooks(page, perPage int, search string, filter lib.FilterParams) ([]model.Book, int64, error) {
+func (r *bookRepository) FindAll(page, perPage int, search string, filter lib.FilterParams) ([]model.Book, int64, error) {
 	var books []model.Book
 	var total int64
 

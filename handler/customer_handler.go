@@ -22,8 +22,8 @@ func NewCustomerHandler(customerService service.CustomerService) *CustomerHandle
 	}
 }
 
-// GetAll handles retrieving all customers with pagination, search, and filter
-func (h *CustomerHandler) GetAll(c *gin.Context) {
+// ListCustomers handles retrieving all customers with pagination, search, and filter
+func (h *CustomerHandler) ListCustomers(c *gin.Context) {
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -34,7 +34,7 @@ func (h *CustomerHandler) GetAll(c *gin.Context) {
 	filters := lib.ParseFilterString(filterStr)
 
 	// Get customers
-	result, err := h.customerService.GetAll(page, perPage, search, filters)
+	result, err := h.customerService.ListCustomers(page, perPage, search, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -47,8 +47,8 @@ func (h *CustomerHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// GetByID handles retrieving a customer by ID
-func (h *CustomerHandler) GetByID(c *gin.Context) {
+// GetCustomer handles retrieving a customer by ID
+func (h *CustomerHandler) GetCustomer(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -61,7 +61,7 @@ func (h *CustomerHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	customer, err := h.customerService.GetByID(id)
+	customer, err := h.customerService.GetCustomer(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,
@@ -130,8 +130,8 @@ func (h *CustomerHandler) GetByCode(c *gin.Context) {
 	})
 }
 
-// Create handles creating a new customer
-func (h *CustomerHandler) Create(c *gin.Context) {
+// CreateCustomer handles creating a new customer
+func (h *CustomerHandler) CreateCustomer(c *gin.Context) {
 	var req dto.CustomerCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ResponseError{
@@ -152,7 +152,7 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 		return
 	}
 
-	customer, err := h.customerService.Create(req)
+	customer, err := h.customerService.CreateCustomer(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -169,8 +169,8 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update handles updating a customer
-func (h *CustomerHandler) Update(c *gin.Context) {
+// UpdateCustomer handles updating a customer
+func (h *CustomerHandler) UpdateCustomer(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -203,7 +203,7 @@ func (h *CustomerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	customer, err := h.customerService.Update(id, req)
+	customer, err := h.customerService.UpdateCustomer(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -220,8 +220,8 @@ func (h *CustomerHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete handles deleting a customer
-func (h *CustomerHandler) Delete(c *gin.Context) {
+// DeleteCustomer handles deleting a customer
+func (h *CustomerHandler) DeleteCustomer(c *gin.Context) {
 	idStr := c.Param("id")
 
 	id, err := uuid.Parse(idStr)
@@ -234,7 +234,7 @@ func (h *CustomerHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err = h.customerService.Delete(id)
+	err = h.customerService.DeleteCustomer(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,

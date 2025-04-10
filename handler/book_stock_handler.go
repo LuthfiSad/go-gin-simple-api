@@ -24,8 +24,8 @@ func NewBookStockHandler(bookStockService service.BookStockService) *BookStockHa
 	}
 }
 
-// GetAll handles retrieving all book stocks with pagination, search, and filter
-func (h *BookStockHandler) GetAll(c *gin.Context) {
+// ListBookStocks handles retrieving all book stocks with pagination, search, and filter
+func (h *BookStockHandler) ListBookStocks(c *gin.Context) {
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
@@ -36,7 +36,7 @@ func (h *BookStockHandler) GetAll(c *gin.Context) {
 	filters := lib.ParseFilterString(filterStr)
 
 	// Get book stocks
-	result, err := h.bookStockService.GetAll(page, perPage, search, filters)
+	result, err := h.bookStockService.ListBookStocks(page, perPage, search, filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -49,11 +49,11 @@ func (h *BookStockHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// GetByCode handles retrieving a book stock by its code
-func (h *BookStockHandler) GetByCode(c *gin.Context) {
+// GetBookStock handles retrieving a book stock by its code
+func (h *BookStockHandler) GetBookStock(c *gin.Context) {
 	code := c.Param("code")
 
-	bookStock, err := h.bookStockService.GetByCode(code)
+	bookStock, err := h.bookStockService.GetBookStock(code)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dto.ResponseError{
 			Status:  http.StatusNotFound,
@@ -127,8 +127,8 @@ func (h *BookStockHandler) GetAvailableByBookID(c *gin.Context) {
 	})
 }
 
-// Create handles creating a new book stock
-func (h *BookStockHandler) Create(c *gin.Context) {
+// CreateBookStock handles creating a new book stock
+func (h *BookStockHandler) CreateBookStock(c *gin.Context) {
 	var req dto.BookStockCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ResponseError{
@@ -148,7 +148,7 @@ func (h *BookStockHandler) Create(c *gin.Context) {
 		return
 	}
 
-	_, err := h.bookStockService.Create(req)
+	_, err := h.bookStockService.CreateBookStock(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -163,9 +163,9 @@ func (h *BookStockHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update handles updating a book stock
-// Update handles updating a book stock
-func (h *BookStockHandler) Update(c *gin.Context) {
+// UpdateBookStock handles updating a book stock
+// UpdateBookStock handles updating a book stock
+func (h *BookStockHandler) UpdateBookStock(c *gin.Context) {
 	code := c.Param("code")
 
 	var req dto.BookStockUpdateRequest
@@ -188,7 +188,7 @@ func (h *BookStockHandler) Update(c *gin.Context) {
 		return
 	}
 
-	bookStock, err := h.bookStockService.Update(code, req)
+	bookStock, err := h.bookStockService.UpdateBookStock(code, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,
@@ -205,11 +205,11 @@ func (h *BookStockHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete handles deleting a book stock
-func (h *BookStockHandler) Delete(c *gin.Context) {
+// DeleteBookStock handles deleting a book stock
+func (h *BookStockHandler) DeleteBookStock(c *gin.Context) {
 	code := c.Param("code")
 
-	err := h.bookStockService.Delete(code)
+	err := h.bookStockService.DeleteBookStock(code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseError{
 			Status:  http.StatusInternalServerError,

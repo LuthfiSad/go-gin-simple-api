@@ -11,8 +11,8 @@ import (
 )
 
 type BookService interface {
-	GetBooks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookRes], error)
-	GetBookByID(id uuid.UUID) (*dto.BookRes, error)
+	ListBooks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookRes], error)
+	GetBook(id uuid.UUID) (*dto.BookRes, error)
 	CreateBook(req dto.BookCreateReq) (*dto.BookRes, error)
 	UpdateBook(id uuid.UUID, req dto.BookUpdateReq) (*dto.BookRes, error)
 	DeleteBook(id uuid.UUID) error
@@ -31,8 +31,8 @@ func NewBookService(repo repository.BookRepository, mediaRepo repository.MediaRe
 	}
 }
 
-func (s *bookService) GetBooks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookRes], error) {
-	books, total, err := s.repo.FindBooks(page, perPage, search, filter)
+func (s *bookService) ListBooks(page, perPage int, search string, filter lib.FilterParams) (*dto.PaginatedResponseData[[]dto.BookRes], error) {
+	books, total, err := s.repo.FindAll(page, perPage, search, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (s *bookService) GetBooks(page, perPage int, search string, filter lib.Filt
 	}, nil
 }
 
-func (s *bookService) GetBookByID(id uuid.UUID) (*dto.BookRes, error) {
+func (s *bookService) GetBook(id uuid.UUID) (*dto.BookRes, error) {
 	book, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, errors.New("book not found")
