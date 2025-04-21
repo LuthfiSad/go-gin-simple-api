@@ -3,7 +3,6 @@ package router
 import (
 	"go-gin-simple-api/handler"
 	"go-gin-simple-api/lib"
-	"go-gin-simple-api/middleware"
 	"go-gin-simple-api/repository"
 	"go-gin-simple-api/service"
 
@@ -15,21 +14,32 @@ func SetupRouter(db *gorm.DB, cloudinary *lib.CloudinaryService) *gin.Engine {
 	router := gin.Default()
 	repo := repository.NewRepository(db)
 	service := service.NewService(repo, cloudinary)
-	handler := handler.NewHandler(service)
+	// menggunakan lazzy
+	handlerInstance := handler.NewHandler(service)
+	// handler := handler.NewHandler(service)
 
 	api := router.Group("/api")
-	SetupAuthRoutes(api, &handler.AuthHandler)
+	SetupAuthRoutes(api, handlerInstance.GetAuthHandler())
+	// SetupAuthRoutes(api, &handler.AuthHandler)
 
 	// api.POST("/register", handler.AuthHandler.Register)
 	// api.POST("/login", handler.AuthHandler.Login)
 
-	api.Use(middleware.JWTAuth(repo.AuthRepository))
-	SetupBookRoutes(api, &handler.BookHandler)
-	SetupMediaRoutes(api, &handler.MediaHandler)
-	SetupBookStockRoutes(api, &handler.BookStockHandler)
-	SetupCustomerRoutes(api, &handler.CustomerHandler)
-	SetupChargeRoutes(api, &handler.ChargeHandler)
-	SetupBookTransactionRoutes(api, &handler.BookTransactionHandler)
+	// api.Use(middleware.JWTAuth(repo.AuthRepository))
+	// menggunakan lazzy
+	SetupBookRoutes(api, handlerInstance.GetBookHandler())
+	SetupMediaRoutes(api, handlerInstance.GetMediaHandler())
+	SetupBookStockRoutes(api, handlerInstance.GetBookStockHandler())
+	SetupCustomerRoutes(api, handlerInstance.GetCustomerHandler())
+	SetupChargeRoutes(api, handlerInstance.GetChargeHandler())
+	SetupBookTransactionRoutes(api, handlerInstance.GetBookTransactionHandler())
+
+	// SetupBookRoutes(api, &handler.BookHandler)
+	// SetupMediaRoutes(api, &handler.MediaHandler)
+	// SetupBookStockRoutes(api, &handler.BookStockHandler)
+	// SetupCustomerRoutes(api, &handler.CustomerHandler)
+	// SetupChargeRoutes(api, &handler.ChargeHandler)
+	// SetupBookTransactionRoutes(api, &handler.BookTransactionHandler)
 
 	// // Book routes
 	// bookRoute := api.Group("/books")
