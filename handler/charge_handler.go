@@ -3,6 +3,7 @@ package handler
 import (
 	"go-gin-simple-api/dto"
 	"go-gin-simple-api/lib"
+	"go-gin-simple-api/model"
 	"go-gin-simple-api/service"
 	"go-gin-simple-api/utils"
 	"net/http"
@@ -29,6 +30,16 @@ func (h *ChargeHandler) ListCharges(c *gin.Context) {
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
 	search := c.Query("search")
 	filterStr := c.Query("filter")
+
+	var data model.Charge
+	if validationErrors := lib.ValidateFilterGeneric(filterStr, data); len(validationErrors) > 0 {
+		c.JSON(http.StatusBadRequest, dto.ResponseError{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
+			Error:   validationErrors,
+		})
+		return
+	}
 
 	// Parse filters
 	filters := lib.ParseFilterString(filterStr)
